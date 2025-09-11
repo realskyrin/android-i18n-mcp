@@ -135,4 +135,63 @@ export class AndroidXMLParser {
     
     await this.writeStringsXML(targetPath, existingStrings);
   }
+
+  async mergeTranslationsWithOrder(
+    targetPath: string,
+    newTranslations: Map<string, string>,
+    keyOrder: string[]
+  ): Promise<void> {
+    const existingStrings = await this.parseStringsXML(targetPath);
+    
+    // Update or add new translations
+    for (const [name, value] of newTranslations) {
+      const existing = existingStrings.get(name);
+      if (existing && existing.translatable !== false) {
+        existing.value = value;
+      } else if (!existing) {
+        existingStrings.set(name, {
+          name,
+          value,
+          translatable: true
+        });
+      }
+    }
+    
+    // Reorder strings according to keyOrder
+    const orderedStrings = new Map<string, StringResource>();
+    
+    // First, add all keys in the specified order
+    for (const key of keyOrder) {
+      if (existingStrings.has(key)) {
+        orderedStrings.set(key, existingStrings.get(key)!);
+      }
+    }
+    
+    // Then add any remaining keys that weren't in keyOrder (shouldn't happen normally)
+    for (const [key, value] of existingStrings) {
+      if (!orderedStrings.has(key)) {
+        orderedStrings.set(key, value);
+      }
+    }
+    
+    await this.writeStringsXML(targetPath, orderedStrings);
+  }
+
+  async syncWithDefaultOrder(
+    targetPath: string,
+    defaultStrings: Map<string, StringResource>,
+    deletedKeys: Set<string>
+  ): Promise<void> {
+    const existingStrings = await this.parseStringsXML(targetPath);
+    const orderedStrings = new Map<string, StringResource>();
+    
+    // Follow the order of keys from default strings
+    for (const [key, defaultResource] of defaultStrings) {
+      if (!deletedKeys.has(key) && existingStrings.has(key)) {
+        orderedStrings.set(key, existingStrings.get(key)!);
+      }
+    }
+    
+    await this.writeStringsXML(targetPath, orderedStrings);
+  }
 }

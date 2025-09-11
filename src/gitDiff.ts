@@ -5,6 +5,8 @@ export interface DiffResult {
   added: Map<string, string>;
   modified: Map<string, string>;
   deleted: Set<string>;
+  orderChanged: boolean;
+  currentOrder: string[];
 }
 
 export class GitDiffAnalyzer {
@@ -20,7 +22,9 @@ export class GitDiffAnalyzer {
     const diffResult: DiffResult = {
       added: new Map(),
       modified: new Map(),
-      deleted: new Set()
+      deleted: new Set(),
+      orderChanged: false,
+      currentOrder: []
     };
 
     try {
@@ -38,10 +42,12 @@ export class GitDiffAnalyzer {
       }
 
       const currentStrings = await this.xmlParser.parseStringsXML(defaultStringsPath);
+      diffResult.currentOrder = Array.from(currentStrings.keys());
       
       const headContent = await this.git.show(['HEAD:' + defaultStringsPath]).catch(() => '');
       
       const previousStrings = new Map<string, StringResource>();
+      let previousOrder: string[] = [];
       if (headContent) {
         const tempPath = `/tmp/temp_strings_${Date.now()}.xml`;
         const fs = await import('fs/promises');
@@ -52,6 +58,7 @@ export class GitDiffAnalyzer {
         for (const [name, resource] of parsed) {
           previousStrings.set(name, resource);
         }
+        previousOrder = Array.from(parsed.keys());
       }
 
       for (const [name, currentResource] of currentStrings) {
@@ -71,6 +78,21 @@ export class GitDiffAnalyzer {
         
         if (!currentStrings.has(name)) {
           diffResult.deleted.add(name);
+        }
+      }
+
+      // Check if the order has changed
+      if (previousOrder.length > 0) {
+        const currentOrderFiltered = diffResult.currentOrder.filter(key => previousStrings.has(key));
+        const previousOrderFiltered = previousOrder.filter(key => currentStrings.has(key));
+        
+        if (currentOrderFiltered.length === previousOrderFiltered.length) {
+          for (let i = 0; i < currentOrderFiltered.length; i++) {
+            if (currentOrderFiltered[i] !== previousOrderFiltered[i]) {
+              diffResult.orderChanged = true;
+              break;
+            }
+          }
         }
       }
 

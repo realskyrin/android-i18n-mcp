@@ -76,11 +76,21 @@ export class TranslationManager {
       summary.deletedStrings = changes.deleted.size;
       summary.totalStrings = changes.added.size + changes.modified.size;
 
-      if (summary.totalStrings === 0 && changes.deleted.size === 0) {
+      // Check if we need to process: either content changes or order changes
+      const hasContentChanges = summary.totalStrings > 0 || changes.deleted.size > 0;
+      const hasOrderChanges = changes.orderChanged;
+
+      if (!hasContentChanges && !hasOrderChanges) {
         console.log(`No changes detected in ${defaultStringsPath}`);
         return summary;
       }
 
+      if (hasOrderChanges && !hasContentChanges) {
+        console.log(`Order changes detected in ${defaultStringsPath}, syncing all language files...`);
+      }
+
+      // Use the order from git diff analysis
+      const keyOrder = changes.currentOrder;
       const stringsToTranslate = new Map([...changes.added, ...changes.modified]);
       
       const moduleDir = path.dirname(path.dirname(defaultStringsPath));
@@ -91,7 +101,9 @@ export class TranslationManager {
           moduleDir,
           lang,
           stringsToTranslate,
-          changes.deleted
+          changes.deleted,
+          keyOrder,
+          hasOrderChanges
         )
       );
       
@@ -116,7 +128,9 @@ export class TranslationManager {
     moduleDir: string,
     language: string,
     stringsToTranslate: Map<string, string>,
-    deletedKeys: Set<string>
+    deletedKeys: Set<string>,
+    keyOrder: string[],
+    forceOrderSync: boolean = false
   ): Promise<TranslationResult> {
     const result: TranslationResult = {
       language,
@@ -139,16 +153,22 @@ export class TranslationManager {
           'en'
         );
         
-        await this.xmlParser.mergeTranslations(targetPath, translations);
+        await this.xmlParser.mergeTranslationsWithOrder(targetPath, translations, keyOrder);
         result.translatedCount = translations.size;
-      }
-
-      if (deletedKeys.size > 0) {
+      } else if (deletedKeys.size > 0 || forceOrderSync) {
+        // Sync the order with default file even if no new translations
         const existingStrings = await this.xmlParser.parseStringsXML(targetPath);
-        for (const key of deletedKeys) {
-          existingStrings.delete(key);
+        const orderedStrings = new Map<string, import('./xmlParser.js').StringResource>();
+        
+        // Reorder according to keyOrder and remove deleted keys
+        for (const key of keyOrder) {
+          if (!deletedKeys.has(key) && existingStrings.has(key)) {
+            orderedStrings.set(key, existingStrings.get(key)!);
+          }
         }
-        await this.xmlParser.writeStringsXML(targetPath, existingStrings);
+        
+        await this.xmlParser.writeStringsXML(targetPath, orderedStrings);
+        console.log(`Synced order for ${language}`);
       }
 
     } catch (error) {

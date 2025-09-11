@@ -171,12 +171,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const relativePath = path.relative(projectRoot, file);
         const diff = await analyzer.getDefaultStringsChanges(relativePath);
         
-        if (diff.added.size > 0 || diff.modified.size > 0 || diff.deleted.size > 0) {
+        if (diff.added.size > 0 || diff.modified.size > 0 || diff.deleted.size > 0 || diff.orderChanged) {
           changes.push({
             file: relativePath,
             added: Array.from(diff.added.keys()),
             modified: Array.from(diff.modified.keys()),
-            deleted: Array.from(diff.deleted)
+            deleted: Array.from(diff.deleted),
+            orderChanged: diff.orderChanged
           });
         }
       }
