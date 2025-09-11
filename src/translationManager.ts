@@ -85,16 +85,21 @@ export class TranslationManager {
       
       const moduleDir = path.dirname(path.dirname(defaultStringsPath));
       
-      for (const lang of this.SUPPORTED_LANGUAGES) {
-        
-        const result = await this.translateLanguage(
+      // Process all languages in parallel
+      const translationPromises = this.SUPPORTED_LANGUAGES.map(lang => 
+        this.translateLanguage(
           moduleDir,
           lang,
           stringsToTranslate,
           changes.deleted
-        );
+        )
+      );
+      
+      const results = await Promise.all(translationPromises);
+      
+      // Process results
+      for (const result of results) {
         summary.languages.push(result);
-        
         if (result.errors.length > 0) {
           summary.success = false;
         }
