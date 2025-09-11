@@ -1,0 +1,196 @@
+# Android Translation MCP Server
+
+An MCP (Model Context Protocol) server that automatically translates Android app string resources to multiple languages by detecting changes in the default `strings.xml` files using Git diff.
+
+## Features
+
+- Automatically detects new or modified strings in default `strings.xml` files using Git diff
+- Translates to 11 languages: Azerbaijani, Belarusian, English, Spanish, Indonesian, Italian, Russian, Turkish, Ukrainian, Simplified Chinese, Traditional Chinese
+- Preserves Android string formatting placeholders (%s, %d, %1$s, etc.)
+- Supports multiple Android modules
+- Batch translation for better performance
+- Only translates changed strings to save API costs
+
+## Supported Languages
+
+- `az` - Azerbaijani (values-az)
+- `be` - Belarusian (values-be)
+- `en` - English (values-en)
+- `es` - Spanish (values-es)
+- `id` - Indonesian (values-id)
+- `it` - Italian (values-it)
+- `ru` - Russian (values-ru)
+- `tr` - Turkish (values-tr)
+- `uk` - Ukrainian (values-uk)
+- `zh-CN` - Simplified Chinese (values-zh-rCN)
+- `zh-TW` - Traditional Chinese (values-zh-rTW)
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd android-translation-mcp
+```
+
+2. Install dependencies:
+```bash
+npm install
+```
+
+3. Build the project:
+```bash
+npm run build
+```
+
+4. Configure environment variables:
+```bash
+cp .env.example .env
+```
+
+Edit `.env` file with your configuration:
+```env
+ANDROID_PROJECT_ROOT=/path/to/your/android/project
+TRANSLATION_PROVIDER=openai
+TRANSLATION_API_KEY=your_api_key_here
+# Optional:
+TRANSLATION_API_BASE_URL=https://api.openai.com/v1
+TRANSLATION_MODEL=gpt-4o-mini
+```
+
+## MCP Configuration
+
+Add this server to your MCP client configuration (e.g., Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "android-translation": {
+      "command": "node",
+      "args": ["/path/to/android-translation-mcp/build/index.js"],
+      "env": {
+        "ANDROID_PROJECT_ROOT": "/path/to/your/android/project",
+        "TRANSLATION_PROVIDER": "openai",
+        "TRANSLATION_API_KEY": "your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+## Available Tools
+
+### 1. `translate_all_modules`
+Detects changes in all default strings.xml files across all modules and translates them to all supported languages.
+
+**Parameters:**
+- `projectRoot` (optional): Android project root directory. Uses `ANDROID_PROJECT_ROOT` env var if not provided.
+
+**Example:**
+```json
+{
+  "tool": "translate_all_modules",
+  "arguments": {
+    "projectRoot": "/path/to/android/project"
+  }
+}
+```
+
+### 2. `translate_module`
+Detects changes in a specific module's default strings.xml and translates to all languages.
+
+**Parameters:**
+- `modulePath` (required): Path to the Android module directory
+
+**Example:**
+```json
+{
+  "tool": "translate_module",
+  "arguments": {
+    "modulePath": "/path/to/android/project/app"
+  }
+}
+```
+
+### 3. `check_changes`
+Checks for uncommitted changes in default strings.xml files without performing translation.
+
+**Parameters:**
+- `projectRoot` (optional): Android project root directory
+
+**Example:**
+```json
+{
+  "tool": "check_changes",
+  "arguments": {
+    "projectRoot": "/path/to/android/project"
+  }
+}
+```
+
+## How It Works
+
+1. **Change Detection**: The server uses Git diff to detect which strings have been added or modified in the default `values/strings.xml` files since the last commit.
+
+2. **Batch Translation**: Changed strings are translated in batches to the target language using the configured AI translation API.
+
+3. **XML Merging**: Translated strings are merged into the existing language-specific `strings.xml` files, preserving existing translations and only updating changed ones.
+
+4. **Module Support**: The server can process multiple Android modules in a single operation, detecting all `strings.xml` files matching the pattern `**/src/main/res/values/strings.xml`.
+
+## Translation Providers
+
+Currently supported:
+- **OpenAI** (including OpenAI-compatible APIs)
+- **DeepSeek** (automatically uses api.deepseek.com endpoint)
+
+Planned support:
+- Anthropic Claude
+- Google Translate
+
+### DeepSeek Configuration Example:
+```env
+TRANSLATION_PROVIDER=deepseek
+TRANSLATION_API_KEY=your_deepseek_api_key
+# Optional: defaults to deepseek-chat
+TRANSLATION_MODEL=deepseek-chat
+```
+
+## Development
+
+Run in development mode with hot reload:
+```bash
+npm run dev
+```
+
+Build the project:
+```bash
+npm run build
+```
+
+## Project Structure
+
+```
+android-translation-mcp/
+├── src/
+│   ├── index.ts           # MCP server entry point
+│   ├── xmlParser.ts       # Android strings.xml parsing
+│   ├── gitDiff.ts         # Git diff analysis
+│   ├── translator.ts      # Translation API integration
+│   └── translationManager.ts # Translation orchestration
+├── package.json
+├── tsconfig.json
+├── .env.example
+└── README.md
+```
+
+## Notes
+
+- The server only translates strings that have `translatable` attribute not set to `false`
+- Deleted strings are automatically removed from translated files
+- Translation preserves Android formatting placeholders
+- All file operations are atomic - if translation fails for any language, no files are modified
+
+## License
+
+MIT
