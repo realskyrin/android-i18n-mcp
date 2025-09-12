@@ -13,17 +13,34 @@ export interface TranslatorConfig {
 }
 
 const LANGUAGE_MAPPING: Record<string, string> = {
-  'az': 'Azerbaijani',
-  'be': 'Belarusian', 
+  'zh-CN': 'Simplified Chinese',
+  'zh-TW': 'Traditional Chinese (Taiwan)',
+  'zh-SG': 'Traditional Chinese (Singapore)',
+  'zh-HK': 'Traditional Chinese (Hong Kong)',
+  'zh-MO': 'Traditional Chinese (Macau)',
   'en': 'English',
   'es': 'Spanish',
-  'id': 'Indonesian',
-  'it': 'Italian',
+  'hi': 'Hindi',
+  'fr': 'French',
+  'ar': 'Arabic',
+  'bn': 'Bengali',
+  'pt': 'Portuguese',
   'ru': 'Russian',
+  'ur': 'Urdu',
+  'id': 'Indonesian',
+  'de': 'German',
+  'ja': 'Japanese',
+  'sw': 'Swahili',
+  'mr': 'Marathi',
+  'te': 'Telugu',
   'tr': 'Turkish',
-  'uk': 'Ukrainian',
-  'zh-CN': 'Simplified Chinese',
-  'zh-TW': 'Traditional Chinese'
+  'ko': 'Korean',
+  'ta': 'Tamil',
+  'vi': 'Vietnamese',
+  'az': 'Azerbaijani',
+  'be': 'Belarusian',
+  'it': 'Italian',
+  'uk': 'Ukrainian'
 };
 
 export class OpenAITranslator implements TranslationProvider {

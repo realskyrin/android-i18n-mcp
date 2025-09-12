@@ -26,21 +26,41 @@ export class TranslationManager {
   private projectRoot: string;
   
   private readonly SUPPORTED_LANGUAGES = [
-    'az', 'be', 'en', 'es', 'id', 'it', 'ru', 'tr', 'uk', 'zh-CN', 'zh-TW'
+    'zh-CN', 'zh-TW', 'zh-SG', 'zh-HK', 'zh-MO',
+    'en', 'es', 'hi', 'fr', 'ar', 'bn', 'pt', 'ru',
+    'ur', 'id', 'de', 'ja', 'sw', 'mr', 'te', 'tr',
+    'ko', 'ta', 'vi', 'az', 'be', 'it', 'uk'
   ];
   
   private readonly LANGUAGE_FOLDER_MAP: Record<string, string> = {
-    'az': 'values-az',
-    'be': 'values-be',
+    'zh-CN': 'values-zh-rCN',
+    'zh-TW': 'values-zh-rTW',
+    'zh-SG': 'values-zh-rSG',
+    'zh-HK': 'values-zh-rHK',
+    'zh-MO': 'values-zh-rMO',
     'en': 'values-en',
     'es': 'values-es',
-    'id': 'values-id',
-    'it': 'values-it',
+    'hi': 'values-hi',
+    'fr': 'values-fr',
+    'ar': 'values-ar',
+    'bn': 'values-bn',
+    'pt': 'values-pt',
     'ru': 'values-ru',
+    'ur': 'values-ur',
+    'id': 'values-id',
+    'de': 'values-de',
+    'ja': 'values-ja',
+    'sw': 'values-sw',
+    'mr': 'values-mr',
+    'te': 'values-te',
     'tr': 'values-tr',
-    'uk': 'values-uk',
-    'zh-CN': 'values-zh-rCN',
-    'zh-TW': 'values-zh-rTW'
+    'ko': 'values-ko',
+    'ta': 'values-ta',
+    'vi': 'values-vi',
+    'az': 'values-az',
+    'be': 'values-be',
+    'it': 'values-it',
+    'uk': 'values-uk'
   };
 
   constructor(projectRoot: string, translatorConfig: TranslatorConfig) {
