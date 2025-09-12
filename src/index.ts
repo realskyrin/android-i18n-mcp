@@ -37,7 +37,7 @@ const translatorConfig: TranslatorConfig = {
 
 const server = new Server(
   {
-    name: 'android-translation-mcp',
+    name: 'android-i18n-mcp',
     version: '1.0.0',
   },
   {
@@ -306,7 +306,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('Android Translation MCP Server started');
+  console.error('Android i18n MCP Server started');
   if (TRANSLATION_LANGUAGES) {
     console.error(`Configured to translate to: ${TRANSLATION_LANGUAGES.join(', ')}`);
   } else {

@@ -1,4 +1,4 @@
-# Android Translation MCP Server
+# Android i18n MCP Server
 
 An MCP (Model Context Protocol) server that automatically translates Android app string resources to multiple languages by detecting changes in the default `strings.xml` files using Git diff.
 
@@ -52,7 +52,7 @@ The server supports translation to 28 languages. You can configure which languag
 1. Clone the repository:
 ```bash
 git clone <repository-url>
-cd android-translation-mcp
+cd android-i18n-mcp
 ```
 
 2. Install dependencies:
@@ -89,9 +89,9 @@ TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
 ```json
 {
   "mcpServers": {
-    "android-translation": {
+    "android-i18n": {
       "command": "node",
-      "args": ["/path/to/android-translation-mcp/build/index.js"],
+      "args": ["/path/to/android-i18n-mcp/build/index.js"],
       "env": {
         "ANDROID_PROJECT_ROOT": "/path/to/your/android/project",
         "TRANSLATION_PROVIDER": "openai",
@@ -108,11 +108,11 @@ TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
 Add the following to your `codx.toml`:
 
 ```toml
-[mcp_servers.copy-trans]
+[mcp_servers.android-i18n]
 command = "node"
-args = ["/path/to/android-translation-mcp/build/index.js"]
+args = ["/path/to/android-i18n-mcp/build/index.js"]
 
-[mcp_servers.copy-trans.env]
+[mcp_servers.android-i18n.env]
 ANDROID_PROJECT_ROOT = "/path/to/android/project"
 TRANSLATION_PROVIDER = "deepseek"
 TRANSLATION_API_BASE_URL = "https://api.deepseek.com/v1"
@@ -242,7 +242,7 @@ npm run build
 ## Project Structure
 
 ```
-android-translation-mcp/
+android-i18n-mcp/
 ├── src/
 │   ├── index.ts           # MCP server entry point
 │   ├── xmlParser.ts       # Android strings.xml parsing

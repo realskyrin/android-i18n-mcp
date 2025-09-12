@@ -1,5 +1,5 @@
 {
-  "name": "android-translation-mcp",
+  "name": "android-i18n-mcp",
   "version": "1.0.0",
   "description": "MCP server for automatic Android strings.xml translation",
   "main": "build/index.js",
