@@ -1,5 +1,10 @@
 # Android i18n MCP Server
 
+<div align="right">
+  <a href="https://github.com/realskyrin/android-i18n-mcp/blob/main/README.md">English</a> | 
+  <a href="https://github.com/realskyrin/android-i18n-mcp/blob/main/README-ZH.md">中文</a>
+</div>
+
 An MCP (Model Context Protocol) server that automatically translates Android app string resources to multiple languages by detecting changes in the default `strings.xml` files using Git diff.
 
 ## Features

@@ -1,5 +1,10 @@
 # Android i18n MCP 服务器
 
+<div align="right">
+  <a href="https://github.com/realskyrin/android-i18n-mcp/blob/main/README.md">English</a> | 
+  <a href="https://github.com/realskyrin/android-i18n-mcp/blob/main/README-ZH.md">中文</a>
+</div>
+
 一个 MCP (Model Context Protocol) 服务器，通过使用 Git diff 检测默认 `strings.xml` 文件的变化，自动将 Android 应用字符串资源翻译成多种语言。
 
 ## 功能特性
