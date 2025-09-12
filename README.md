@@ -60,7 +60,7 @@ TRANSLATION_MODEL=gpt-4o-mini
 
 ## MCP Configuration
 
-Add this server to your MCP client configuration (e.g., Claude Desktop):
+### Add this server to your MCP client configuration (e.g., Claude Desktop):
 
 ```json
 {
@@ -76,6 +76,23 @@ Add this server to your MCP client configuration (e.g., Claude Desktop):
     }
   }
 }
+```
+
+### Codx Configuration Example
+
+Add the following to your `codx.toml`:
+
+```toml
+[mcp_servers.copy-trans]
+command = "node"
+args = ["/path/to/android-translation-mcp/build/index.js"]
+
+[mcp_servers.copy-trans.env]
+ANDROID_PROJECT_ROOT = "/path/to/android/project"
+TRANSLATION_PROVIDER = "deepseek"
+TRANSLATION_API_BASE_URL = "https://api.deepseek.com/v1"
+TRANSLATION_API_KEY = "sk-xxxxxx"
+TRANSLATION_MODEL = "deepseek-chat"
 ```
 
 ## Available Tools
