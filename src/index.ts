@@ -102,8 +102,8 @@ const TOOLS: Tool[] = [
     }
   },
   {
-    name: 'create_missing_languages',
-    description: 'Create missing language directories and copy default strings.xml to them',
+    name: 'create_and_translate_missing_languages',
+    description: 'Create missing language directories and translate default strings.xml into them',
     inputSchema: {
       type: 'object',
       properties: {
@@ -136,11 +136,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       console.error('Checking for missing language directories...');
       const missingCheck = await manager.checkMissingLanguages();
       if (missingCheck.totalMissingCount > 0) {
-        console.error(`Found ${missingCheck.totalMissingCount} missing language directories, creating them...`);
-        const createResult = await manager.createMissingLanguages();
-        console.error(`Created ${createResult.totalCreated} language directories`);
+        console.error(`Found ${missingCheck.totalMissingCount} missing language directories, creating and translating them...`);
+        const createResult = await manager.createAndTranslateMissingLanguages();
+        console.error(`Created ${createResult.totalCreated} language directories; translated ${createResult.totalStringsTranslated} strings`);
         if (createResult.errors.length > 0) {
-          console.error(`Failed to create ${createResult.errors.length} directories`);
+          console.error(`Failed to create/translate ${createResult.errors.length} directories`);
         }
       }
       
@@ -194,11 +194,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       console.error('Checking for missing language directories...');
       const missingCheck = await manager.checkMissingLanguages();
       if (missingCheck.totalMissingCount > 0) {
-        console.error(`Found ${missingCheck.totalMissingCount} missing language directories, creating them...`);
-        const createResult = await manager.createMissingLanguages();
-        console.error(`Created ${createResult.totalCreated} language directories`);
+        console.error(`Found ${missingCheck.totalMissingCount} missing language directories, creating and translating them...`);
+        const createResult = await manager.createAndTranslateMissingLanguages();
+        console.error(`Created ${createResult.totalCreated} language directories; translated ${createResult.totalStringsTranslated} strings`);
         if (createResult.errors.length > 0) {
-          console.error(`Failed to create ${createResult.errors.length} directories`);
+          console.error(`Failed to create/translate ${createResult.errors.length} directories`);
         }
       }
       
@@ -269,13 +269,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       };
     }
     
-    if (name === 'create_missing_languages') {
+    if (name === 'create_and_translate_missing_languages') {
       const projectRoot = (args?.projectRoot as string) || DEFAULT_PROJECT_ROOT;
       const manager = new TranslationManager(projectRoot, translatorConfig);
-      
-      console.error(`Creating missing language directories in: ${projectRoot}`);
-      const result = await manager.createMissingLanguages();
-      
+
+      console.error(`Creating and translating missing language directories in: ${projectRoot}`);
+      const result = await manager.createAndTranslateMissingLanguages();
+
       return {
         content: [
           {

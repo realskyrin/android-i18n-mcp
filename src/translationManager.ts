@@ -137,12 +137,12 @@ export class TranslationManager {
       const hasOrderChanges = changes.orderChanged;
 
       if (!hasContentChanges && !hasOrderChanges) {
-        console.log(`No changes detected in ${defaultStringsPath}`);
+        console.error(`No changes detected in ${defaultStringsPath}`);
         return summary;
       }
 
       if (hasOrderChanges && !hasContentChanges) {
-        console.log(`Order changes detected in ${defaultStringsPath}, syncing all language files...`);
+        console.error(`Order changes detected in ${defaultStringsPath}, syncing all language files...`);
       }
 
       // Use the order from git diff analysis
@@ -201,7 +201,7 @@ export class TranslationManager {
       result.filePath = targetPath;
 
       if (stringsToTranslate.size > 0) {
-        console.log(`Translating ${stringsToTranslate.size} strings to ${language}...`);
+        console.error(`Translating ${stringsToTranslate.size} strings to ${language}...`);
         
         const translations = await this.translator.translateBatch(
           stringsToTranslate,
@@ -224,7 +224,7 @@ export class TranslationManager {
         }
         
         await this.xmlParser.writeStringsXML(targetPath, orderedStrings);
-        console.log(`Synced order for ${language}`);
+        console.error(`Synced order for ${language}`);
       }
 
     } catch (error) {
@@ -243,12 +243,12 @@ export class TranslationManager {
       throw new Error('No default strings.xml files found in the project');
     }
 
-    console.log(`Found ${defaultFiles.length} modules to process`);
+    console.error(`Found ${defaultFiles.length} modules to process`);
     
     const summaries: TranslationSummary[] = [];
     
     for (const defaultFile of defaultFiles) {
-      console.log(`\nProcessing: ${path.relative(this.projectRoot, defaultFile)}`);
+      console.error(`\nProcessing: ${path.relative(this.projectRoot, defaultFile)}`);
       const summary = await this.translateModule(defaultFile);
       summaries.push(summary);
     }
@@ -373,7 +373,7 @@ export class TranslationManager {
           });
           result.totalCreated++;
           
-          console.log(`Created ${lang} strings.xml for ${moduleName}`);
+          console.error(`Created ${lang} strings.xml for ${moduleName}`);
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           result.errors.push({
@@ -384,6 +384,130 @@ export class TranslationManager {
           console.error(`Failed to create ${lang} for ${moduleName}: ${errorMessage}`);
         }
       }
+    }
+
+    return result;
+  }
+
+  async createAndTranslateMissingLanguages(): Promise<{
+    created: Array<{
+      module: string;
+      language: string;
+      path: string;
+      translatedCount: number;
+      totalStrings: number;
+    }>;
+    errors: Array<{
+      module: string;
+      language: string;
+      error: string;
+    }>;
+    totalCreated: number;
+    totalStringsTranslated: number;
+  }> {
+    const defaultFiles = await this.findDefaultStringsFiles();
+    const result = {
+      created: [] as Array<{
+        module: string;
+        language: string;
+        path: string;
+        translatedCount: number;
+        totalStrings: number;
+      }>,
+      errors: [] as Array<{
+        module: string;
+        language: string;
+        error: string;
+      }>,
+      totalCreated: 0,
+      totalStringsTranslated: 0
+    };
+
+    for (const defaultFile of defaultFiles) {
+      const moduleDir = path.dirname(path.dirname(defaultFile));
+      const moduleName = path.relative(this.projectRoot, moduleDir);
+
+      // Read default strings.xml and prepare translation inputs (preserve order)
+      const defaultStrings = await this.xmlParser.parseStringsXML(defaultFile);
+      const stringsToTranslate = new Map<string, string>();
+      const defaultOrder: string[] = [];
+      for (const [key, res] of defaultStrings) {
+        defaultOrder.push(key);
+        if (res.translatable !== false) {
+          stringsToTranslate.set(key, res.value);
+        }
+      }
+
+      // Determine missing languages for this module first
+      const fs = await import('fs/promises');
+      const missingLangs: string[] = [];
+      for (const lang of this.languagesToTranslate) {
+        const langFolder = this.LANGUAGE_FOLDER_MAP[lang];
+        const targetPath = path.join(moduleDir, langFolder, 'strings.xml');
+        try {
+          await fs.access(targetPath);
+        } catch {
+          missingLangs.push(lang);
+        }
+      }
+
+      // Process missing languages in parallel (usually small, e.g., 1-3)
+      const perLangTasks = missingLangs.map(async (lang) => {
+        const langFolder = this.LANGUAGE_FOLDER_MAP[lang];
+        const targetPath = path.join(moduleDir, langFolder, 'strings.xml');
+
+        try {
+          await fs.mkdir(path.dirname(targetPath), { recursive: true });
+
+          let translations = new Map<string, string>();
+          let translatedCount = 0;
+
+          if (lang === 'en') {
+            for (const [key, val] of stringsToTranslate) translations.set(key, val);
+            translatedCount = translations.size;
+          } else if (stringsToTranslate.size > 0) {
+            try {
+              translations = await this.translator.translateBatch(stringsToTranslate, lang, 'en');
+              translatedCount = translations.size;
+            } catch (e) {
+              const emsg = e instanceof Error ? e.message : String(e);
+              console.error(`Failed to translate for ${moduleName} (${lang}): ${emsg}`);
+              translations = new Map(stringsToTranslate);
+              translatedCount = 0;
+            }
+          }
+
+          const out = new Map<string, import('./xmlParser.js').StringResource>();
+          for (const key of defaultOrder) {
+            const src = defaultStrings.get(key)!;
+            if (src.translatable === false) {
+              out.set(key, { name: key, value: src.value, translatable: false });
+            } else {
+              const val = translations.get(key) ?? src.value;
+              out.set(key, { name: key, value: val, translatable: true });
+            }
+          }
+
+          await this.xmlParser.writeStringsXML(targetPath, out);
+
+          result.created.push({
+            module: moduleName,
+            language: lang,
+            path: targetPath,
+            translatedCount,
+            totalStrings: stringsToTranslate.size
+          });
+          result.totalCreated++;
+          result.totalStringsTranslated += translatedCount;
+          console.error(`Created and ${translatedCount > 0 ? 'translated' : 'initialized'} ${lang} strings.xml for ${moduleName}`);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          result.errors.push({ module: moduleName, language: lang, error: errorMessage });
+          console.error(`Failed to create/translate ${lang} for ${moduleName}: ${errorMessage}`);
+        }
+      });
+
+      await Promise.all(perLangTasks);
     }
 
     return result;

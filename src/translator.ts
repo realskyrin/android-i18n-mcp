@@ -47,11 +47,15 @@ const LANGUAGE_MAPPING: Record<string, string> = {
 export class OpenAITranslator implements TranslationProvider {
   private client: OpenAI;
   private model: string;
+  private static readonly DEFAULT_TIMEOUT_MS = 60_000; // 60s per request
+  private static readonly MAX_BATCH_SIZE = 60; // limit items per batch to keep prompts small
 
   constructor(config: TranslatorConfig) {
     this.client = new OpenAI({
       apiKey: config.apiKey,
-      baseURL: config.baseUrl
+      baseURL: config.baseUrl,
+      timeout: OpenAITranslator.DEFAULT_TIMEOUT_MS,
+      maxRetries: 2
     });
     this.model = config.model || 'gpt-4o-mini';
   }
@@ -91,7 +95,7 @@ Text to translate: "${text}"`;
     }
   }
 
-  async translateBatch(texts: Map<string, string>, targetLanguage: string, sourceLanguage: string = 'en'): Promise<Map<string, string>> {
+  private async translateBatchChunk(texts: Map<string, string>, targetLanguage: string, sourceLanguage: string = 'en'): Promise<Map<string, string>> {
     const targetLangName = LANGUAGE_MAPPING[targetLanguage] || targetLanguage;
     const sourceLangName = LANGUAGE_MAPPING[sourceLanguage] || sourceLanguage;
     
@@ -150,6 +154,28 @@ ${JSON.stringify(jsonInput, null, 2)}`;
       }
       return results;
     }
+  }
+
+  async translateBatch(texts: Map<string, string>, targetLanguage: string, sourceLanguage: string = 'en'): Promise<Map<string, string>> {
+    const size = texts.size;
+    if (size <= OpenAITranslator.MAX_BATCH_SIZE) {
+      return this.translateBatchChunk(texts, targetLanguage, sourceLanguage);
+    }
+
+    // Chunk large batches to avoid timeouts and context overflows
+    const keys = Array.from(texts.keys());
+    const results = new Map<string, string>();
+    for (let i = 0; i < keys.length; i += OpenAITranslator.MAX_BATCH_SIZE) {
+      const sliceKeys = keys.slice(i, i + OpenAITranslator.MAX_BATCH_SIZE);
+      const chunk = new Map<string, string>();
+      for (const k of sliceKeys) chunk.set(k, texts.get(k)!);
+
+      const translatedChunk = await this.translateBatchChunk(chunk, targetLanguage, sourceLanguage);
+      for (const [k, v] of translatedChunk) {
+        results.set(k, v);
+      }
+    }
+    return results;
   }
 }
 
