@@ -10,6 +10,7 @@ export interface TranslatorConfig {
   apiKey: string;
   baseUrl?: string;
   model?: string;
+  translationLanguages?: string[];  // Optional: specify which languages to translate to
 }
 
 const LANGUAGE_MAPPING: Record<string, string> = {

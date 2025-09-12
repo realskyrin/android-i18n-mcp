@@ -24,6 +24,7 @@ export class TranslationManager {
   private xmlParser: AndroidXMLParser;
   private translator: TranslationProvider;
   private projectRoot: string;
+  private languagesToTranslate: string[];
   
   private readonly SUPPORTED_LANGUAGES = [
     'zh-CN', 'zh-TW', 'zh-SG', 'zh-HK', 'zh-MO',
@@ -67,6 +68,41 @@ export class TranslationManager {
     this.projectRoot = projectRoot;
     this.xmlParser = new AndroidXMLParser();
     this.translator = TranslatorFactory.create(translatorConfig);
+    
+    // Validate and set languages to translate
+    if (translatorConfig.translationLanguages && translatorConfig.translationLanguages.length > 0) {
+      this.languagesToTranslate = this.validateLanguages(translatorConfig.translationLanguages);
+    } else {
+      // Default to all supported languages if not configured
+      this.languagesToTranslate = [...this.SUPPORTED_LANGUAGES];
+    }
+  }
+
+  private validateLanguages(configuredLanguages: string[]): string[] {
+    const validLanguages: string[] = [];
+    const unsupportedLanguages: string[] = [];
+    
+    for (const lang of configuredLanguages) {
+      if (this.SUPPORTED_LANGUAGES.includes(lang)) {
+        validLanguages.push(lang);
+      } else {
+        unsupportedLanguages.push(lang);
+      }
+    }
+    
+    if (unsupportedLanguages.length > 0) {
+      console.warn(`⚠️  Warning: The following languages are not supported and will be ignored:`);
+      console.warn(`   ${unsupportedLanguages.join(', ')}`);
+      console.warn(`\n   Supported languages are:`);
+      console.warn(`   ${this.SUPPORTED_LANGUAGES.join(', ')}\n`);
+    }
+    
+    if (validLanguages.length === 0) {
+      console.warn(`⚠️  Warning: No valid languages found in configuration. Using all supported languages.`);
+      return [...this.SUPPORTED_LANGUAGES];
+    }
+    
+    return validLanguages;
   }
 
   async findDefaultStringsFiles(): Promise<string[]> {
@@ -115,8 +151,8 @@ export class TranslationManager {
       
       const moduleDir = path.dirname(path.dirname(defaultStringsPath));
       
-      // Process all languages in parallel
-      const translationPromises = this.SUPPORTED_LANGUAGES.map(lang => 
+      // Process configured languages in parallel
+      const translationPromises = this.languagesToTranslate.map(lang => 
         this.translateLanguage(
           moduleDir,
           lang,

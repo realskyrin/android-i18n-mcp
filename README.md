@@ -5,25 +5,47 @@ An MCP (Model Context Protocol) server that automatically translates Android app
 ## Features
 
 - Automatically detects new or modified strings in default `strings.xml` files using Git diff
-- Translates to 11 languages: Azerbaijani, Belarusian, English, Spanish, Indonesian, Italian, Russian, Turkish, Ukrainian, Simplified Chinese, Traditional Chinese
+- Translates to up to 28 languages (configurable via environment variable)
 - Preserves Android string formatting placeholders (%s, %d, %1$s, etc.)
 - Supports multiple Android modules
 - Batch translation for better performance
 - Only translates changed strings to save API costs
+- Configurable language selection to optimize API usage
 
 ## Supported Languages
 
-- `az` - Azerbaijani (values-az)
-- `be` - Belarusian (values-be)
+The server supports translation to 28 languages. You can configure which languages to translate to using the `TRANSLATION_LANGUAGES` environment variable.
+
+### All Supported Languages:
+
+- `zh-CN` - Simplified Chinese (values-zh-rCN)
+- `zh-TW` - Traditional Chinese Taiwan (values-zh-rTW)
+- `zh-SG` - Traditional Chinese Singapore (values-zh-rSG)
+- `zh-HK` - Traditional Chinese Hong Kong (values-zh-rHK)
+- `zh-MO` - Traditional Chinese Macau (values-zh-rMO)
 - `en` - English (values-en)
 - `es` - Spanish (values-es)
-- `id` - Indonesian (values-id)
-- `it` - Italian (values-it)
+- `hi` - Hindi (values-hi)
+- `fr` - French (values-fr)
+- `ar` - Arabic (values-ar)
+- `bn` - Bengali (values-bn)
+- `pt` - Portuguese (values-pt)
 - `ru` - Russian (values-ru)
+- `ur` - Urdu (values-ur)
+- `id` - Indonesian (values-id)
+- `de` - German (values-de)
+- `ja` - Japanese (values-ja)
+- `sw` - Swahili (values-sw)
+- `mr` - Marathi (values-mr)
+- `te` - Telugu (values-te)
 - `tr` - Turkish (values-tr)
+- `ko` - Korean (values-ko)
+- `ta` - Tamil (values-ta)
+- `vi` - Vietnamese (values-vi)
+- `az` - Azerbaijani (values-az)
+- `be` - Belarusian (values-be)
+- `it` - Italian (values-it)
 - `uk` - Ukrainian (values-uk)
-- `zh-CN` - Simplified Chinese (values-zh-rCN)
-- `zh-TW` - Traditional Chinese (values-zh-rTW)
 
 ## Installation
 
@@ -56,6 +78,8 @@ TRANSLATION_API_KEY=your_api_key_here
 # Optional:
 TRANSLATION_API_BASE_URL=https://api.openai.com/v1
 TRANSLATION_MODEL=gpt-4o-mini
+# Comma-separated list of languages to translate (optional, defaults to all 28 languages)
+TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
 ```
 
 ## MCP Configuration
@@ -71,7 +95,8 @@ TRANSLATION_MODEL=gpt-4o-mini
       "env": {
         "ANDROID_PROJECT_ROOT": "/path/to/your/android/project",
         "TRANSLATION_PROVIDER": "openai",
-        "TRANSLATION_API_KEY": "your_api_key_here"
+        "TRANSLATION_API_KEY": "your_api_key_here",
+        "TRANSLATION_LANGUAGES": "zh-CN,es,fr,de"  // Optional: specific languages
       }
     }
   }
@@ -93,6 +118,7 @@ TRANSLATION_PROVIDER = "deepseek"
 TRANSLATION_API_BASE_URL = "https://api.deepseek.com/v1"
 TRANSLATION_API_KEY = "sk-xxxxxx"
 TRANSLATION_MODEL = "deepseek-chat"
+TRANSLATION_LANGUAGES = "zh-CN,es,fr,de,ja,ko"  # Optional: specific languages
 ```
 
 ## Available Tools
@@ -171,7 +197,35 @@ TRANSLATION_PROVIDER=deepseek
 TRANSLATION_API_KEY=your_deepseek_api_key
 # Optional: defaults to deepseek-chat
 TRANSLATION_MODEL=deepseek-chat
+# Optional: specific languages to translate (defaults to all 28)
+TRANSLATION_LANGUAGES=zh-CN,en,es,fr,de,ja,ko
 ```
+
+## Configuration Options
+
+### Language Selection
+
+You can configure which languages to translate to using the `TRANSLATION_LANGUAGES` environment variable:
+
+- **Translate to all 28 supported languages (default):**
+  ```env
+  # Don't set TRANSLATION_LANGUAGES or leave it empty
+  ```
+
+- **Translate to specific languages only:**
+  ```env
+  TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
+  ```
+
+- **Single language:**
+  ```env
+  TRANSLATION_LANGUAGES=zh-CN
+  ```
+
+**Note:** If you specify languages that are not supported, the server will:
+1. Show a warning listing the unsupported languages
+2. Display all supported languages for reference
+3. Continue with only the valid languages from your configuration
 
 ## Development
 

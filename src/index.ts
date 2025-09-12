@@ -18,6 +18,9 @@ const TRANSLATION_PROVIDER = process.env.TRANSLATION_PROVIDER || 'openai';
 const API_KEY = process.env.TRANSLATION_API_KEY || '';
 const API_BASE_URL = process.env.TRANSLATION_API_BASE_URL;
 const TRANSLATION_MODEL = process.env.TRANSLATION_MODEL;
+const TRANSLATION_LANGUAGES = process.env.TRANSLATION_LANGUAGES 
+  ? process.env.TRANSLATION_LANGUAGES.split(',').map(lang => lang.trim())
+  : undefined;
 
 if (!API_KEY) {
   console.error('Error: TRANSLATION_API_KEY environment variable is required');
@@ -28,7 +31,8 @@ const translatorConfig: TranslatorConfig = {
   provider: TRANSLATION_PROVIDER as 'openai' | 'deepseek' | 'anthropic' | 'google',
   apiKey: API_KEY,
   baseUrl: API_BASE_URL,
-  model: TRANSLATION_MODEL
+  model: TRANSLATION_MODEL,
+  translationLanguages: TRANSLATION_LANGUAGES
 };
 
 const server = new Server(
@@ -217,6 +221,11 @@ async function main() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
   console.error('Android Translation MCP Server started');
+  if (TRANSLATION_LANGUAGES) {
+    console.error(`Configured to translate to: ${TRANSLATION_LANGUAGES.join(', ')}`);
+  } else {
+    console.error('No specific languages configured - will translate to all 28 supported languages');
+  }
 }
 
 main().catch((error) => {
