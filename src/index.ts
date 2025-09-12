@@ -87,6 +87,32 @@ const TOOLS: Tool[] = [
         }
       }
     }
+  },
+  {
+    name: 'check_missing_languages',
+    description: 'Check which language directories are missing compared to configured TRANSLATION_LANGUAGES',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Android project root directory (optional)'
+        }
+      }
+    }
+  },
+  {
+    name: 'create_missing_languages',
+    description: 'Create missing language directories and copy default strings.xml to them',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        projectRoot: {
+          type: 'string',
+          description: 'Android project root directory (optional)'
+        }
+      }
+    }
   }
 ];
 
@@ -105,6 +131,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const manager = new TranslationManager(projectRoot, translatorConfig);
       
       console.error(`Starting translation for all modules in: ${projectRoot}`);
+      
+      // Check and create missing language directories first
+      console.error('Checking for missing language directories...');
+      const missingCheck = await manager.checkMissingLanguages();
+      if (missingCheck.totalMissingCount > 0) {
+        console.error(`Found ${missingCheck.totalMissingCount} missing language directories, creating them...`);
+        const createResult = await manager.createMissingLanguages();
+        console.error(`Created ${createResult.totalCreated} language directories`);
+        if (createResult.errors.length > 0) {
+          console.error(`Failed to create ${createResult.errors.length} directories`);
+        }
+      }
+      
       const summaries = await manager.translateAllModules();
       
       const totalSummary = {
@@ -150,6 +189,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       );
       
       console.error(`Starting translation for module: ${fullPath}`);
+      
+      // Check and create missing language directories first
+      console.error('Checking for missing language directories...');
+      const missingCheck = await manager.checkMissingLanguages();
+      if (missingCheck.totalMissingCount > 0) {
+        console.error(`Found ${missingCheck.totalMissingCount} missing language directories, creating them...`);
+        const createResult = await manager.createMissingLanguages();
+        console.error(`Created ${createResult.totalCreated} language directories`);
+        if (createResult.errors.length > 0) {
+          console.error(`Failed to create ${createResult.errors.length} directories`);
+        }
+      }
+      
       const summary = await manager.translateSpecificModule(fullPath);
       
       return {
@@ -195,6 +247,40 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               filesWithChanges: changes.length,
               changes
             }, null, 2)
+          }
+        ]
+      };
+    }
+    
+    if (name === 'check_missing_languages') {
+      const projectRoot = (args?.projectRoot as string) || DEFAULT_PROJECT_ROOT;
+      const manager = new TranslationManager(projectRoot, translatorConfig);
+      
+      console.error(`Checking missing language directories in: ${projectRoot}`);
+      const result = await manager.checkMissingLanguages();
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
+          }
+        ]
+      };
+    }
+    
+    if (name === 'create_missing_languages') {
+      const projectRoot = (args?.projectRoot as string) || DEFAULT_PROJECT_ROOT;
+      const manager = new TranslationManager(projectRoot, translatorConfig);
+      
+      console.error(`Creating missing language directories in: ${projectRoot}`);
+      const result = await manager.createMissingLanguages();
+      
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify(result, null, 2)
           }
         ]
       };

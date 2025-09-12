@@ -260,4 +260,132 @@ export class TranslationManager {
     const defaultStringsPath = path.join(modulePath, 'src/main/res/values/strings.xml');
     return await this.translateModule(defaultStringsPath);
   }
+
+  async checkMissingLanguages(): Promise<{
+    modules: Array<{
+      module: string;
+      missingLanguages: string[];
+      existingLanguages: string[];
+    }>;
+    totalMissingCount: number;
+  }> {
+    const defaultFiles = await this.findDefaultStringsFiles();
+    const result = {
+      modules: [] as Array<{
+        module: string;
+        missingLanguages: string[];
+        existingLanguages: string[];
+      }>,
+      totalMissingCount: 0
+    };
+
+    for (const defaultFile of defaultFiles) {
+      const moduleDir = path.dirname(path.dirname(defaultFile));
+      const moduleName = path.relative(this.projectRoot, moduleDir);
+      const missingLanguages: string[] = [];
+      const existingLanguages: string[] = [];
+
+      for (const lang of this.languagesToTranslate) {
+        const langFolder = this.LANGUAGE_FOLDER_MAP[lang];
+        const targetPath = path.join(moduleDir, langFolder, 'strings.xml');
+        
+        try {
+          const fs = await import('fs/promises');
+          await fs.access(targetPath);
+          existingLanguages.push(lang);
+        } catch {
+          missingLanguages.push(lang);
+        }
+      }
+
+      if (missingLanguages.length > 0) {
+        result.modules.push({
+          module: moduleName,
+          missingLanguages,
+          existingLanguages
+        });
+        result.totalMissingCount += missingLanguages.length;
+      }
+    }
+
+    return result;
+  }
+
+  async createMissingLanguages(): Promise<{
+    created: Array<{
+      module: string;
+      language: string;
+      path: string;
+    }>;
+    errors: Array<{
+      module: string;
+      language: string;
+      error: string;
+    }>;
+    totalCreated: number;
+  }> {
+    const defaultFiles = await this.findDefaultStringsFiles();
+    const result = {
+      created: [] as Array<{
+        module: string;
+        language: string;
+        path: string;
+      }>,
+      errors: [] as Array<{
+        module: string;
+        language: string;
+        error: string;
+      }>,
+      totalCreated: 0
+    };
+
+    for (const defaultFile of defaultFiles) {
+      const moduleDir = path.dirname(path.dirname(defaultFile));
+      const moduleName = path.relative(this.projectRoot, moduleDir);
+      
+      // Read default strings.xml
+      const defaultStrings = await this.xmlParser.parseStringsXML(defaultFile);
+
+      for (const lang of this.languagesToTranslate) {
+        const langFolder = this.LANGUAGE_FOLDER_MAP[lang];
+        const targetPath = path.join(moduleDir, langFolder, 'strings.xml');
+        
+        try {
+          const fs = await import('fs/promises');
+          // Check if file already exists
+          try {
+            await fs.access(targetPath);
+            continue; // Skip if already exists
+          } catch {
+            // File doesn't exist, proceed to create
+          }
+
+          // Create directory and copy strings
+          await fs.mkdir(path.dirname(targetPath), { recursive: true });
+          
+          // Copy all strings from default, they will be translated later
+          await this.xmlParser.writeStringsXML(targetPath, defaultStrings);
+          
+          result.created.push({
+            module: moduleName,
+            language: lang,
+            path: targetPath
+          });
+          result.totalCreated++;
+          
+          console.log(`Created ${lang} strings.xml for ${moduleName}`);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          result.errors.push({
+            module: moduleName,
+            language: lang,
+            error: errorMessage
+          });
+          console.error(`Failed to create ${lang} for ${moduleName}: ${errorMessage}`);
+        }
+      }
+    }
+
+    return result;
+  }
 }
