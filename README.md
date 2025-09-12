@@ -84,7 +84,7 @@ TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
 
 ## MCP Configuration
 
-### Add this server to your MCP client configuration (e.g., Claude Desktop):
+### Add this server to your MCP client configuration (e.g., Cursor，Claude Desktop):
 
 ```json
 {
@@ -95,6 +95,7 @@ TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
       "env": {
         "ANDROID_PROJECT_ROOT": "/path/to/your/android/project",
         "TRANSLATION_PROVIDER": "openai",
+        "TRANSLATION_API_BASE_URL": "https://api.deepseek.com/v1",
         "TRANSLATION_API_KEY": "your_api_key_here",
         "TRANSLATION_LANGUAGES": "zh-CN,es,fr,de"  // Optional: specific languages
       }
@@ -165,6 +166,38 @@ Checks for uncommitted changes in default strings.xml files without performing t
 ```json
 {
   "tool": "check_changes",
+  "arguments": {
+    "projectRoot": "/path/to/android/project"
+  }
+}
+```
+
+### 4. `check_missing_languages`
+Checks which language directories are missing compared to the configured TRANSLATION_LANGUAGES environment variable.
+
+**Parameters:**
+- `projectRoot` (optional): Android project root directory
+
+**Example:**
+```json
+{
+  "tool": "check_missing_languages",
+  "arguments": {
+    "projectRoot": "/path/to/android/project"
+  }
+}
+```
+
+### 5. `create_and_translate_missing_languages`
+Creates missing language directories and translates the default strings.xml into them for all configured languages.
+
+**Parameters:**
+- `projectRoot` (optional): Android project root directory
+
+**Example:**
+```json
+{
+  "tool": "create_and_translate_missing_languages",
   "arguments": {
     "projectRoot": "/path/to/android/project"
   }
