@@ -7,6 +7,8 @@
 
 一个 MCP (Model Context Protocol) 服务器，通过使用 Git diff 检测默认 `strings.xml` 文件的变化，自动将 Android 应用字符串资源翻译成多种语言。
 
+📖 [项目介绍文章](https://juejin.cn/post/7549032025673662514)
+
 ## 截图
 
 <div align="center">

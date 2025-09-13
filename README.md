@@ -7,6 +7,8 @@
 
 An MCP (Model Context Protocol) server that automatically translates Android app string resources to multiple languages by detecting changes in the default `strings.xml` files using Git diff.
 
+📖 [Project Introduction Article](https://juejin.cn/post/7549032025673662514) (Chinese)
+
 ## Screenshots
 
 <div align="center">
