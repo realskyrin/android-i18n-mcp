@@ -10,12 +10,12 @@ An MCP (Model Context Protocol) server that automatically translates Android app
 ## Screenshots
 
 <div align="center">
-  <img src="imgs/9548ffd0aeeebf8617bd116f6e82c3a7.png" alt="Batch Generation of Multi-language Files" width="600"/>
+  <img src="imgs/9548ffd0aeeebf8617bd116f6e82c3a7.png" alt="Batch Generation of Multi-language Files" width="100%"/>
   <p><em>Generate multiple language files in one go, batch translation at scale for improved efficiency</em></p>
 </div>
 
 <div align="center">
-  <img src="imgs/f8c5cc563a3df28ecfaeda97011d0dbe.png" alt="MCP Tool Execution" width="600"/>
+  <img src="imgs/f8c5cc563a3df28ecfaeda97011d0dbe.png" alt="MCP Tool Execution" width="100%"/>
   <p><em>MCP tool automatically detecting and translating missing languages</em></p>
 </div>
 

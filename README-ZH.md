@@ -10,12 +10,12 @@
 ## 截图
 
 <div align="center">
-  <img src="imgs/9548ffd0aeeebf8617bd116f6e82c3a7.png" alt="批量生成多语言文件" width="600"/>
+  <img src="imgs/9548ffd0aeeebf8617bd116f6e82c3a7.png" alt="批量生成多语言文件" width="100%"/>
   <p><em>一次性生成多种语言文件，大规模批量翻译，显著提高效率</em></p>
 </div>
 
 <div align="center">
-  <img src="imgs/f8c5cc563a3df28ecfaeda97011d0dbe.png" alt="MCP 工具执行" width="600"/>
+  <img src="imgs/f8c5cc563a3df28ecfaeda97011d0dbe.png" alt="MCP 工具执行" width="100%"/>
   <p><em>MCP 工具自动检测并翻译缺失的语言</em></p>
 </div>
 
