@@ -141,6 +141,15 @@ TRANSLATION_MODEL = "deepseek-chat"
 TRANSLATION_LANGUAGES = "zh-CN,es,fr,de,ja,ko"  # Optional: specific languages
 ```
 
+## Agent Instruction
+
+You can configure AGENTS.md or CLAUDE.md to have the Agent automatically call MCP when strings.xml files are modified:
+
+```markdown
+## Copy res update Guidelines
+- Whenever a strings.xml file is modified, run android-i18n mcp to check and update copy.
+```
+
 ## Available Tools
 
 ### 1. `translate_all_modules`
