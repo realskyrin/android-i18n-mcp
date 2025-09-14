@@ -49,6 +49,7 @@ export class OpenAITranslator implements TranslationProvider {
   private model: string;
   private static readonly DEFAULT_TIMEOUT_MS = 60_000; // 60s per request
   private static readonly MAX_BATCH_SIZE = 60; // limit items per batch to keep prompts small
+  private static readonly NEWLINE_PLACEHOLDER = '__NEWLINE__';
 
   constructor(config: TranslatorConfig) {
     this.client = new OpenAI({
@@ -60,16 +61,28 @@ export class OpenAITranslator implements TranslationProvider {
     this.model = config.model || 'gpt-4o-mini';
   }
 
+  private escapeNewlines(text: string): string {
+    return text.replace(/\\n/g, OpenAITranslator.NEWLINE_PLACEHOLDER);
+  }
+
+  private unescapeNewlines(text: string): string {
+    return text.replace(new RegExp(OpenAITranslator.NEWLINE_PLACEHOLDER, 'g'), '\\n');
+  }
+
   async translate(text: string, targetLanguage: string, sourceLanguage: string = 'en'): Promise<string> {
     const targetLangName = LANGUAGE_MAPPING[targetLanguage] || targetLanguage;
     const sourceLangName = LANGUAGE_MAPPING[sourceLanguage] || sourceLanguage;
 
-    const prompt = `Translate the following Android app string resource from ${sourceLangName} to ${targetLangName}. 
-Keep the translation natural and appropriate for mobile UI. 
+    // Escape newlines before translation
+    const escapedText = this.escapeNewlines(text);
+
+    const prompt = `Translate the following Android app string resource from ${sourceLangName} to ${targetLangName}.
+Keep the translation natural and appropriate for mobile UI.
 Preserve any placeholders like %s, %d, %1$s, etc.
+IMPORTANT: Preserve the placeholder ${OpenAITranslator.NEWLINE_PLACEHOLDER} exactly as it appears - do not translate or modify it.
 Only return the translated text without any explanation.
 
-Text to translate: "${text}"`;
+Text to translate: "${escapedText}"`;
 
     try {
       const response = await this.client.chat.completions.create({
@@ -88,7 +101,9 @@ Text to translate: "${text}"`;
         max_tokens: 500
       });
 
-      return response.choices[0]?.message?.content?.trim() || text;
+      const translatedText = response.choices[0]?.message?.content?.trim() || escapedText;
+      // Unescape newlines after translation
+      return this.unescapeNewlines(translatedText);
     } catch (error) {
       console.error(`Translation error for ${targetLanguage}:`, error);
       throw error;
@@ -98,17 +113,20 @@ Text to translate: "${text}"`;
   private async translateBatchChunk(texts: Map<string, string>, targetLanguage: string, sourceLanguage: string = 'en'): Promise<Map<string, string>> {
     const targetLangName = LANGUAGE_MAPPING[targetLanguage] || targetLanguage;
     const sourceLangName = LANGUAGE_MAPPING[sourceLanguage] || sourceLanguage;
-    
+
     const entries = Array.from(texts.entries());
     if (entries.length === 0) {
       return new Map();
     }
 
-    const jsonInput = Object.fromEntries(entries);
-    
+    // Escape newlines in all texts before translation
+    const escapedEntries = entries.map(([key, value]) => [key, this.escapeNewlines(value)]);
+    const jsonInput = Object.fromEntries(escapedEntries);
+
     const prompt = `Translate the following Android app string resources from ${sourceLangName} to ${targetLangName}.
 Keep translations natural and appropriate for mobile UI.
 Preserve any placeholders like %s, %d, %1$s, etc.
+IMPORTANT: Preserve the placeholder ${OpenAITranslator.NEWLINE_PLACEHOLDER} exactly as it appears - do not translate or modify it.
 Return ONLY a JSON object with the same keys and translated values.
 
 Input JSON:
@@ -138,10 +156,15 @@ ${JSON.stringify(jsonInput, null, 2)}`;
       }
 
       const translatedJson = JSON.parse(content);
-      return new Map(Object.entries(translatedJson));
+      // Unescape newlines in all translated texts
+      const results = new Map<string, string>();
+      for (const [key, value] of Object.entries(translatedJson)) {
+        results.set(key, this.unescapeNewlines(value as string));
+      }
+      return results;
     } catch (error) {
       console.error(`Batch translation error for ${targetLanguage}:`, error);
-      
+
       const results = new Map<string, string>();
       for (const [key, value] of texts) {
         try {
