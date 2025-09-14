@@ -46,6 +46,38 @@ export class AndroidXMLParser {
     });
   }
 
+  /**
+   * Escape special characters for Android resource strings
+   * - Escapes single quotes ' as \'
+   * - Escapes &apos; as \&apos; (if not already escaped)
+   * - Escapes @ at the beginning as \@
+   * - Handles other Android-specific escaping rules
+   */
+  private escapeAndroidString(value: string): string {
+    let escaped = value;
+
+    // 1. Escape single quotes that are not already escaped
+    escaped = escaped.replace(/(?<!\\)'/g, "\\'");
+
+    // 2. Escape &apos; that are not already escaped with backslash
+    escaped = escaped.replace(/(?<!\\)(&apos;)/g, '\\$1');
+
+    // 3. Escape @ at the beginning of the string
+    if (escaped.startsWith('@')) {
+      escaped = '\\' + escaped;
+    }
+
+    // 4. Also handle &quot; similarly (not already escaped)
+    escaped = escaped.replace(/(?<!\\)(&quot;)/g, '\\$1');
+
+    // 5. Handle &lt; and &gt; (less common but should be consistent)
+    escaped = escaped.replace(/(?<!\\)(&lt;)/g, '\\$1');
+    escaped = escaped.replace(/(?<!\\)(&gt;)/g, '\\$1');
+    escaped = escaped.replace(/(?<!\\)(&amp;)/g, '\\$1');
+
+    return escaped;
+  }
+
   async parseStringsXML(filePath: string): Promise<Map<string, StringResource>> {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
@@ -91,13 +123,13 @@ export class AndroidXMLParser {
     const stringArray = Array.from(strings.values()).map(str => {
       const obj: any = {
         '@_name': str.name,
-        '#text': str.value
+        '#text': this.escapeAndroidString(str.value)
       };
-      
+
       if (str.translatable === false) {
         obj['@_translatable'] = 'false';
       }
-      
+
       return obj;
     });
 
@@ -109,7 +141,7 @@ export class AndroidXMLParser {
 
     let xmlContent = this.builder.build(xmlObj);
     xmlContent = '<?xml version="1.0" encoding="utf-8"?>\n' + xmlContent;
-    
+
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.writeFile(filePath, xmlContent, 'utf-8');
   }
