@@ -202,13 +202,36 @@ export class TranslationManager {
 
       if (stringsToTranslate.size > 0) {
         console.error(`Translating ${stringsToTranslate.size} strings to ${language}...`);
-        
-        const translations = await this.translator.translateBatch(
-          stringsToTranslate,
-          language,
-          'en'
-        );
-        
+
+        let translations: Map<string, string> = new Map();
+        let retryCount = 0;
+        const maxRetries = 3;
+        let lastError: Error | undefined;
+
+        while (retryCount < maxRetries) {
+          try {
+            translations = await this.translator.translateBatch(
+              stringsToTranslate,
+              language,
+              'en'
+            );
+            break; // Success
+          } catch (e) {
+            lastError = e instanceof Error ? e : new Error(String(e));
+            retryCount++;
+
+            if (retryCount < maxRetries) {
+              console.error(`Translation attempt ${retryCount} failed for ${language}: ${lastError.message}. Retrying...`);
+              await new Promise(resolve => setTimeout(resolve, 2000 * retryCount));
+            }
+          }
+        }
+
+        if (retryCount >= maxRetries && lastError) {
+          console.error(`❌ Failed to translate to ${language} after ${maxRetries} attempts: ${lastError.message}`);
+          throw lastError;
+        }
+
         await this.xmlParser.mergeTranslationsWithOrder(targetPath, translations, keyOrder);
         result.translatedCount = translations.size;
       } else if (deletedKeys.size > 0 || forceOrderSync) {
@@ -466,13 +489,34 @@ export class TranslationManager {
             for (const [key, val] of stringsToTranslate) translations.set(key, val);
             translatedCount = translations.size;
           } else if (stringsToTranslate.size > 0) {
-            try {
-              translations = await this.translator.translateBatch(stringsToTranslate, lang, 'en');
-              translatedCount = translations.size;
-            } catch (e) {
-              const emsg = e instanceof Error ? e.message : String(e);
-              console.error(`Failed to translate for ${moduleName} (${lang}): ${emsg}`);
-              translations = new Map(stringsToTranslate);
+            let retryCount = 0;
+            const maxRetries = 3;
+            let lastError: Error | undefined;
+
+            while (retryCount < maxRetries) {
+              try {
+                translations = await this.translator.translateBatch(stringsToTranslate, lang, 'en');
+                translatedCount = translations.size;
+                break; // Success, exit retry loop
+              } catch (e) {
+                lastError = e instanceof Error ? e : new Error(String(e));
+                retryCount++;
+
+                if (retryCount < maxRetries) {
+                  console.error(`Translation attempt ${retryCount} failed for ${moduleName} (${lang}): ${lastError.message}. Retrying...`);
+                  await new Promise(resolve => setTimeout(resolve, 2000 * retryCount)); // Exponential backoff
+                }
+              }
+            }
+
+            if (retryCount >= maxRetries && lastError) {
+              console.error(`❌ Failed to translate ${moduleName} to ${lang} after ${maxRetries} attempts: ${lastError.message}`);
+              console.error(`⚠️  WARNING: Using placeholder text for ${lang} - manual translation required!`);
+
+              // Use a clear placeholder instead of copying the original text
+              for (const [key, val] of stringsToTranslate) {
+                translations.set(key, `[TRANSLATION_FAILED: ${lang}] ${val}`);
+              }
               translatedCount = 0;
             }
           }

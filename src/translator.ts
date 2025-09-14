@@ -47,7 +47,7 @@ const LANGUAGE_MAPPING: Record<string, string> = {
 export class OpenAITranslator implements TranslationProvider {
   private client: OpenAI;
   private model: string;
-  private static readonly DEFAULT_TIMEOUT_MS = 60_000; // 60s per request
+  private static readonly DEFAULT_TIMEOUT_MS = 120_000; // 120s per request
   private static readonly MAX_BATCH_SIZE = 60; // limit items per batch to keep prompts small
   private static readonly NEWLINE_PLACEHOLDER = '__NEWLINE__';
 
@@ -56,7 +56,7 @@ export class OpenAITranslator implements TranslationProvider {
       apiKey: config.apiKey,
       baseURL: config.baseUrl,
       timeout: OpenAITranslator.DEFAULT_TIMEOUT_MS,
-      maxRetries: 2
+      maxRetries: 3
     });
     this.model = config.model || 'gpt-4o-mini';
   }
@@ -76,10 +76,19 @@ export class OpenAITranslator implements TranslationProvider {
     // Escape newlines before translation
     const escapedText = this.escapeNewlines(text);
 
+    let additionalInstructions = '';
+    if (targetLanguage === 'ko') {
+      additionalInstructions = '\nIMPORTANT: Use formal Korean (합니다/습니다 endings) appropriate for app interfaces.';
+    } else if (targetLanguage === 'zh-TW') {
+      additionalInstructions = '\nIMPORTANT: Use Traditional Chinese characters specifically for Taiwan users. Avoid Simplified Chinese.';
+    } else if (targetLanguage === 'zh-CN') {
+      additionalInstructions = '\nIMPORTANT: Use Simplified Chinese characters. Avoid Traditional Chinese.';
+    }
+
     const prompt = `Translate the following Android app string resource from ${sourceLangName} to ${targetLangName}.
 Keep the translation natural and appropriate for mobile UI.
 Preserve any placeholders like %s, %d, %1$s, etc.
-IMPORTANT: Preserve the placeholder ${OpenAITranslator.NEWLINE_PLACEHOLDER} exactly as it appears - do not translate or modify it.
+IMPORTANT: Preserve the placeholder ${OpenAITranslator.NEWLINE_PLACEHOLDER} exactly as it appears - do not translate or modify it.${additionalInstructions}
 Only return the translated text without any explanation.
 
 Text to translate: "${escapedText}"`;
@@ -123,10 +132,19 @@ Text to translate: "${escapedText}"`;
     const escapedEntries = entries.map(([key, value]) => [key, this.escapeNewlines(value)]);
     const jsonInput = Object.fromEntries(escapedEntries);
 
+    let additionalInstructions = '';
+    if (targetLanguage === 'ko') {
+      additionalInstructions = '\nIMPORTANT: Use formal Korean (합니다/습니다 endings) appropriate for app interfaces.';
+    } else if (targetLanguage === 'zh-TW') {
+      additionalInstructions = '\nIMPORTANT: Use Traditional Chinese characters specifically for Taiwan users. Avoid Simplified Chinese.';
+    } else if (targetLanguage === 'zh-CN') {
+      additionalInstructions = '\nIMPORTANT: Use Simplified Chinese characters. Avoid Traditional Chinese.';
+    }
+
     const prompt = `Translate the following Android app string resources from ${sourceLangName} to ${targetLangName}.
 Keep translations natural and appropriate for mobile UI.
 Preserve any placeholders like %s, %d, %1$s, etc.
-IMPORTANT: Preserve the placeholder ${OpenAITranslator.NEWLINE_PLACEHOLDER} exactly as it appears - do not translate or modify it.
+IMPORTANT: Preserve the placeholder ${OpenAITranslator.NEWLINE_PLACEHOLDER} exactly as it appears - do not translate or modify it.${additionalInstructions}
 Return ONLY a JSON object with the same keys and translated values.
 
 Input JSON:
@@ -158,23 +176,60 @@ ${JSON.stringify(jsonInput, null, 2)}`;
       const translatedJson = JSON.parse(content);
       // Unescape newlines in all translated texts
       const results = new Map<string, string>();
+      let untranslatedCount = 0;
+
       for (const [key, value] of Object.entries(translatedJson)) {
-        results.set(key, this.unescapeNewlines(value as string));
+        const translatedValue = this.unescapeNewlines(value as string);
+        const originalValue = texts.get(key);
+
+        // Check if the translation is identical to the original (shouldn't happen for non-English targets)
+        if (targetLanguage !== 'en' && translatedValue === originalValue && originalValue && originalValue.length > 3) {
+          untranslatedCount++;
+          console.warn(`⚠️ Warning: Key "${key}" appears untranslated for ${targetLanguage}: "${translatedValue}"`);
+        }
+
+        results.set(key, translatedValue);
       }
+
+      if (untranslatedCount > 0) {
+        console.error(`⚠️ ${untranslatedCount} strings appear untranslated for ${targetLanguage}. Consider retrying with a different model.`);
+      }
+
       return results;
     } catch (error) {
       console.error(`Batch translation error for ${targetLanguage}:`, error);
 
       const results = new Map<string, string>();
+      let failedKeys: string[] = [];
+
       for (const [key, value] of texts) {
-        try {
-          const translated = await this.translate(value, targetLanguage, sourceLanguage);
-          results.set(key, translated);
-        } catch (e) {
-          console.error(`Failed to translate key "${key}":`, e);
-          results.set(key, value);
+        let retryCount = 0;
+        const maxRetries = 2;
+        let translated: string | null = null;
+
+        while (retryCount < maxRetries && !translated) {
+          try {
+            translated = await this.translate(value, targetLanguage, sourceLanguage);
+            results.set(key, translated);
+          } catch (e) {
+            retryCount++;
+            if (retryCount < maxRetries) {
+              console.error(`Retry ${retryCount} for key "${key}" to ${targetLanguage}`);
+              await new Promise(resolve => setTimeout(resolve, 1000 * retryCount));
+            } else {
+              console.error(`❌ Failed to translate key "${key}" to ${targetLanguage} after ${maxRetries} attempts:`, e);
+              failedKeys.push(key);
+              results.set(key, `[TRANSLATION_FAILED: ${targetLanguage}] ${value}`);
+            }
+          }
         }
       }
+
+      if (failedKeys.length > 0) {
+        console.error(`⚠️  WARNING: ${failedKeys.length} keys failed to translate to ${targetLanguage}`);
+        console.error(`Failed keys: ${failedKeys.join(', ')}`);
+      }
+
       return results;
     }
   }
