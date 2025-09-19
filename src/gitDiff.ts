@@ -1,3 +1,4 @@
+import * as path from 'path';
 import simpleGit, { SimpleGit } from 'simple-git';
 import { AndroidXMLParser, StringResource } from './xmlParser.js';
 
@@ -12,9 +13,11 @@ export interface DiffResult {
 export class GitDiffAnalyzer {
   private git: SimpleGit;
   private xmlParser: AndroidXMLParser;
+  private workingDir: string;
 
   constructor(workingDir: string) {
-    this.git = simpleGit(workingDir);
+    this.workingDir = path.resolve(workingDir);
+    this.git = simpleGit(this.workingDir);
     this.xmlParser = new AndroidXMLParser();
   }
 
@@ -30,9 +33,12 @@ export class GitDiffAnalyzer {
     try {
       const status = await this.git.status();
       const isTracked = !status.not_added.includes(defaultStringsPath);
-      
+
       if (!isTracked) {
-        const currentStrings = await this.xmlParser.parseStringsXML(defaultStringsPath);
+        const absolutePath = path.isAbsolute(defaultStringsPath)
+          ? defaultStringsPath
+          : path.join(this.workingDir, defaultStringsPath);
+        const currentStrings = await this.xmlParser.parseStringsXML(absolutePath);
         for (const [name, resource] of currentStrings) {
           if (resource.translatable !== false) {
             diffResult.added.set(name, resource.value);
@@ -41,7 +47,10 @@ export class GitDiffAnalyzer {
         return diffResult;
       }
 
-      const currentStrings = await this.xmlParser.parseStringsXML(defaultStringsPath);
+      const absolutePath = path.isAbsolute(defaultStringsPath)
+        ? defaultStringsPath
+        : path.join(this.workingDir, defaultStringsPath);
+      const currentStrings = await this.xmlParser.parseStringsXML(absolutePath);
       diffResult.currentOrder = Array.from(currentStrings.keys());
       
       const headContent = await this.git.show(['HEAD:' + defaultStringsPath]).catch(() => '');
