@@ -14,11 +14,53 @@ export class GitDiffAnalyzer {
   private git: SimpleGit;
   private xmlParser: AndroidXMLParser;
   private workingDir: string;
+  private repoRootPromise?: Promise<string>;
 
   constructor(workingDir: string) {
     this.workingDir = path.resolve(workingDir);
     this.git = simpleGit(this.workingDir);
     this.xmlParser = new AndroidXMLParser();
+  }
+
+  private normalizePath(filePath: string): string {
+    return filePath.split(path.sep).join('/');
+  }
+
+  private async getRepoRoot(): Promise<string> {
+    if (!this.repoRootPromise) {
+      this.repoRootPromise = this.git
+        .revparse(['--show-toplevel'])
+        .then(root => path.resolve(root.trim()))
+        .catch(() => this.workingDir);
+    }
+    return this.repoRootPromise;
+  }
+
+  private async resolvePaths(filePath: string): Promise<{
+    absolutePath: string;
+    gitRelativePath: string;
+    workingRelativePath: string;
+  }> {
+    const absolutePath = path.isAbsolute(filePath)
+      ? filePath
+      : path.join(this.workingDir, filePath);
+
+    const repoRoot = await this.getRepoRoot();
+    let gitRelativePath = path.relative(repoRoot, absolutePath);
+    const workingRelativePath = path.relative(this.workingDir, absolutePath);
+
+    gitRelativePath = this.normalizePath(gitRelativePath);
+    const normalizedWorkingRelative = this.normalizePath(workingRelativePath);
+
+    if (!gitRelativePath || gitRelativePath.startsWith('..')) {
+      throw new Error(`File is outside of git repository: ${absolutePath}`);
+    }
+
+    return {
+      absolutePath,
+      gitRelativePath,
+      workingRelativePath: normalizedWorkingRelative
+    };
   }
 
   async getDefaultStringsChanges(defaultStringsPath: string): Promise<DiffResult> {
@@ -32,12 +74,17 @@ export class GitDiffAnalyzer {
 
     try {
       const status = await this.git.status();
-      const isTracked = !status.not_added.includes(defaultStringsPath);
+      const {
+        absolutePath,
+        gitRelativePath,
+        workingRelativePath
+      } = await this.resolvePaths(defaultStringsPath);
+
+      const notAdded = status.not_added.map(p => this.normalizePath(p));
+      const created = status.created.map(p => this.normalizePath(p));
+      const isTracked = !notAdded.includes(workingRelativePath) && !created.includes(workingRelativePath);
 
       if (!isTracked) {
-        const absolutePath = path.isAbsolute(defaultStringsPath)
-          ? defaultStringsPath
-          : path.join(this.workingDir, defaultStringsPath);
         const currentStrings = await this.xmlParser.parseStringsXML(absolutePath);
         for (const [name, resource] of currentStrings) {
           if (resource.translatable !== false) {
@@ -47,13 +94,10 @@ export class GitDiffAnalyzer {
         return diffResult;
       }
 
-      const absolutePath = path.isAbsolute(defaultStringsPath)
-        ? defaultStringsPath
-        : path.join(this.workingDir, defaultStringsPath);
       const currentStrings = await this.xmlParser.parseStringsXML(absolutePath);
       diffResult.currentOrder = Array.from(currentStrings.keys());
       
-      const headContent = await this.git.show(['HEAD:' + defaultStringsPath]).catch(() => '');
+      const headContent = await this.git.show(['HEAD:' + gitRelativePath]).catch(() => '');
       
       const previousStrings = new Map<string, StringResource>();
       let previousOrder: string[] = [];
@@ -84,7 +128,7 @@ export class GitDiffAnalyzer {
 
       for (const [name, previousResource] of previousStrings) {
         if (previousResource.translatable === false) continue;
-        
+
         if (!currentStrings.has(name)) {
           diffResult.deleted.add(name);
         }
@@ -114,9 +158,14 @@ export class GitDiffAnalyzer {
   }
 
   async hasUncommittedChanges(filePath: string): Promise<boolean> {
+    const { workingRelativePath } = await this.resolvePaths(filePath);
     const status = await this.git.status();
-    return status.modified.includes(filePath) || 
-           status.not_added.includes(filePath) ||
-           status.created.includes(filePath);
+    const modified = status.modified.map(p => this.normalizePath(p));
+    const notAdded = status.not_added.map(p => this.normalizePath(p));
+    const created = status.created.map(p => this.normalizePath(p));
+
+    return modified.includes(workingRelativePath) ||
+           notAdded.includes(workingRelativePath) ||
+           created.includes(workingRelativePath);
   }
 }
