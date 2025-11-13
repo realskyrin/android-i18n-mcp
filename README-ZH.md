@@ -99,6 +99,8 @@ TRANSLATION_API_BASE_URL=https://api.openai.com/v1
 TRANSLATION_MODEL=gpt-4o-mini
 # 逗号分隔的语言列表（可选，默认为所有 28 种语言）
 TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
+# 源语言设置（可选，默认为 'en'。如果您的默认 strings.xml 使用其他语言，如中文，请设置为 'zh-CN'）
+TRANSLATOR_SOURCE_LANGUAGE=en
 ```
 
 ## MCP 配置
@@ -116,7 +118,8 @@ TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
         "TRANSLATION_PROVIDER": "openai",
         "TRANSLATION_API_BASE_URL": "https://api.deepseek.com/v1",
         "TRANSLATION_API_KEY": "your_api_key_here",
-        "TRANSLATION_LANGUAGES": "zh-CN,es,fr,de"  // 可选：指定语言
+        "TRANSLATION_LANGUAGES": "zh-CN,es,fr,de",  // 可选：指定语言
+        "TRANSLATOR_SOURCE_LANGUAGE": "en"  // 可选：指定源语言（默认: en）
       }
     }
   }
@@ -139,6 +142,7 @@ TRANSLATION_API_BASE_URL = "https://api.deepseek.com/v1"
 TRANSLATION_API_KEY = "sk-xxxxxx"
 TRANSLATION_MODEL = "deepseek-chat"
 TRANSLATION_LANGUAGES = "zh-CN,es,fr,de,ja,ko"  # 可选：指定语言，如果项目中不存在则会自动新增并翻译
+TRANSLATOR_SOURCE_LANGUAGE = "en"  # 可选：指定源语言（默认: en）
 ```
 
 ## Agent Instruction
@@ -260,6 +264,8 @@ TRANSLATION_API_KEY=your_deepseek_api_key
 TRANSLATION_MODEL=deepseek-chat
 # 可选：要翻译的特定语言（默认为所有 28 种）
 TRANSLATION_LANGUAGES=zh-CN,en,es,fr,de,ja,ko
+# 可选：指定源语言（默认为 'en'）
+TRANSLATOR_SOURCE_LANGUAGE=en
 ```
 
 ## 配置选项
@@ -287,6 +293,35 @@ TRANSLATION_LANGUAGES=zh-CN,en,es,fr,de,ja,ko
 1. 显示警告，列出不支持的语言
 2. 显示所有支持的语言供参考
 3. 仅使用配置中的有效语言继续运行
+
+### 源语言配置
+
+默认情况下，服务器假设您的默认 `values/strings.xml` 文件使用英语（`en`）。如果您的项目使用其他语言作为默认语言（例如中文），您需要配置源语言：
+
+**场景 1：默认 strings.xml 使用英语（无需配置）**
+```env
+# 不设置 TRANSLATOR_SOURCE_LANGUAGE，默认为 'en'
+```
+
+**场景 2：默认 strings.xml 使用中文**
+```env
+TRANSLATOR_SOURCE_LANGUAGE=zh-CN
+```
+
+**场景 3：使用其他语言作为默认**
+```env
+# 支持的任何语言代码
+TRANSLATOR_SOURCE_LANGUAGE=es  # 西班牙语
+TRANSLATOR_SOURCE_LANGUAGE=fr  # 法语
+TRANSLATOR_SOURCE_LANGUAGE=ja  # 日语
+# 等等...
+```
+
+**重要提示：**
+- 正确配置源语言可以确保翻译质量和准确性
+- 如果源语言配置错误，可能导致翻译失败或翻译结果不正确
+- 当目标语言与源语言相同时，将直接复制文本而不进行翻译
+- 翻译验证逻辑会根据源语言自动调整，避免误报未翻译的警告
 
 ## 开发
 

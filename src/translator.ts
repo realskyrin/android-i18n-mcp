@@ -11,6 +11,7 @@ export interface TranslatorConfig {
   baseUrl?: string;
   model?: string;
   translationLanguages?: string[];  // Optional: specify which languages to translate to
+  sourceLanguage?: string;  // Optional: specify the source language (default: 'en')
 }
 
 const LANGUAGE_MAPPING: Record<string, string> = {
@@ -182,8 +183,8 @@ ${JSON.stringify(jsonInput, null, 2)}`;
         const translatedValue = this.unescapeNewlines(value as string);
         const originalValue = texts.get(key);
 
-        // Check if the translation is identical to the original (shouldn't happen for non-English targets)
-        if (targetLanguage !== 'en' && translatedValue === originalValue && originalValue && originalValue.length > 3) {
+        // Check if the translation is identical to the original (shouldn't happen when target != source)
+        if (targetLanguage !== sourceLanguage && translatedValue === originalValue && originalValue && originalValue.length > 3) {
           untranslatedCount++;
           console.warn(`⚠️ Warning: Key "${key}" appears untranslated for ${targetLanguage}: "${translatedValue}"`);
         }

@@ -21,6 +21,7 @@ const TRANSLATION_MODEL = process.env.TRANSLATION_MODEL;
 const TRANSLATION_LANGUAGES = process.env.TRANSLATION_LANGUAGES 
   ? process.env.TRANSLATION_LANGUAGES.split(',').map(lang => lang.trim())
   : undefined;
+const SOURCE_LANGUAGE = process.env.TRANSLATOR_SOURCE_LANGUAGE || 'en';
 
 if (!API_KEY) {
   console.error('Error: TRANSLATION_API_KEY environment variable is required');
@@ -32,7 +33,8 @@ const translatorConfig: TranslatorConfig = {
   apiKey: API_KEY,
   baseUrl: API_BASE_URL,
   model: TRANSLATION_MODEL,
-  translationLanguages: TRANSLATION_LANGUAGES
+  translationLanguages: TRANSLATION_LANGUAGES,
+  sourceLanguage: SOURCE_LANGUAGE,
 };
 
 const server = new Server(

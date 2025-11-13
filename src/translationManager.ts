@@ -25,6 +25,7 @@ export class TranslationManager {
   private translator: TranslationProvider;
   private projectRoot: string;
   private languagesToTranslate: string[];
+  private sourceLanguage: string;
   
   private readonly SUPPORTED_LANGUAGES = [
     'zh-CN', 'zh-TW', 'zh-SG', 'zh-HK', 'zh-MO',
@@ -68,7 +69,8 @@ export class TranslationManager {
     this.projectRoot = projectRoot;
     this.xmlParser = new AndroidXMLParser();
     this.translator = TranslatorFactory.create(translatorConfig);
-    
+    this.sourceLanguage = translatorConfig.sourceLanguage || 'en';
+
     // Validate and set languages to translate
     if (translatorConfig.translationLanguages && translatorConfig.translationLanguages.length > 0) {
       this.languagesToTranslate = this.validateLanguages(translatorConfig.translationLanguages);
@@ -213,7 +215,7 @@ export class TranslationManager {
             translations = await this.translator.translateBatch(
               stringsToTranslate,
               language,
-              'en'
+              this.sourceLanguage
             );
             break; // Success
           } catch (e) {
@@ -485,7 +487,8 @@ export class TranslationManager {
           let translations = new Map<string, string>();
           let translatedCount = 0;
 
-          if (lang === 'en') {
+          if (lang === this.sourceLanguage) {
+            // No translation needed if target is the same as source
             for (const [key, val] of stringsToTranslate) translations.set(key, val);
             translatedCount = translations.size;
           } else if (stringsToTranslate.size > 0) {
@@ -495,7 +498,7 @@ export class TranslationManager {
 
             while (retryCount < maxRetries) {
               try {
-                translations = await this.translator.translateBatch(stringsToTranslate, lang, 'en');
+                translations = await this.translator.translateBatch(stringsToTranslate, lang, this.sourceLanguage);
                 translatedCount = translations.size;
                 break; // Success, exit retry loop
               } catch (e) {

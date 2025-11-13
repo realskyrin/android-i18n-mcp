@@ -99,6 +99,8 @@ TRANSLATION_API_BASE_URL=https://api.openai.com/v1
 TRANSLATION_MODEL=gpt-4o-mini
 # Comma-separated list of languages to translate (optional, defaults to all 28 languages)
 TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
+# Source language setting (optional, defaults to 'en'. If your default strings.xml uses another language like Chinese, set it to 'zh-CN')
+TRANSLATOR_SOURCE_LANGUAGE=en
 ```
 
 ## MCP Configuration
@@ -116,7 +118,8 @@ TRANSLATION_LANGUAGES=zh-CN,es,fr,de,ja,ko
         "TRANSLATION_PROVIDER": "openai",
         "TRANSLATION_API_BASE_URL": "https://api.deepseek.com/v1",
         "TRANSLATION_API_KEY": "your_api_key_here",
-        "TRANSLATION_LANGUAGES": "zh-CN,es,fr,de"  // Optional: specific languages
+        "TRANSLATION_LANGUAGES": "zh-CN,es,fr,de",  // Optional: specific languages
+        "TRANSLATOR_SOURCE_LANGUAGE": "en"  // Optional: source language (default: en)
       }
     }
   }
@@ -139,6 +142,7 @@ TRANSLATION_API_BASE_URL = "https://api.deepseek.com/v1"
 TRANSLATION_API_KEY = "sk-xxxxxx"
 TRANSLATION_MODEL = "deepseek-chat"
 TRANSLATION_LANGUAGES = "zh-CN,es,fr,de,ja,ko"  # Optional: specific languages
+TRANSLATOR_SOURCE_LANGUAGE = "en"  # Optional: source language (default: en)
 ```
 
 ## Agent Instruction
@@ -260,6 +264,8 @@ TRANSLATION_API_KEY=your_deepseek_api_key
 TRANSLATION_MODEL=deepseek-chat
 # Optional: specific languages to translate (defaults to all 28)
 TRANSLATION_LANGUAGES=zh-CN,en,es,fr,de,ja,ko
+# Optional: source language (defaults to 'en')
+TRANSLATOR_SOURCE_LANGUAGE=en
 ```
 
 ## Configuration Options
@@ -287,6 +293,35 @@ You can configure which languages to translate to using the `TRANSLATION_LANGUAG
 1. Show a warning listing the unsupported languages
 2. Display all supported languages for reference
 3. Continue with only the valid languages from your configuration
+
+### Source Language Configuration
+
+By default, the server assumes your default `values/strings.xml` file uses English (`en`). If your project uses a different language as the default (e.g., Chinese), you need to configure the source language:
+
+**Scenario 1: Default strings.xml uses English (no configuration needed)**
+```env
+# Don't set TRANSLATOR_SOURCE_LANGUAGE, defaults to 'en'
+```
+
+**Scenario 2: Default strings.xml uses Chinese**
+```env
+TRANSLATOR_SOURCE_LANGUAGE=zh-CN
+```
+
+**Scenario 3: Using other languages as default**
+```env
+# Any supported language code
+TRANSLATOR_SOURCE_LANGUAGE=es  # Spanish
+TRANSLATOR_SOURCE_LANGUAGE=fr  # French
+TRANSLATOR_SOURCE_LANGUAGE=ja  # Japanese
+# etc...
+```
+
+**Important Notes:**
+- Correct source language configuration ensures translation quality and accuracy
+- Incorrect source language configuration may lead to translation failures or incorrect results
+- When the target language matches the source language, text will be copied directly without translation
+- Translation validation logic automatically adjusts based on the source language to avoid false untranslated warnings
 
 ## Development
 
